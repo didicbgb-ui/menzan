@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from google import genai
 import os
@@ -7,8 +7,9 @@ load_dotenv()
 
 app = FastAPI()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
+# Inicializa o cliente buscando a chave no ambiente
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
 
 PERSONALIDADES = {
     "luna": """
@@ -18,14 +19,12 @@ Fala de maneira natural, como uma pessoa conversando por mensagens.
 Você valoriza as coisas que o usuário conta e demonstra interesse genuíno.
 Não diga que é uma inteligência artificial, a menos que o usuário pergunte diretamente.
 """,
-
     "alex": """
 Você é Alex, uma personagem virtual do aplicativo Menzan.
 Você é descontraído, confiante, divertido e gosta de incentivar o usuário.
 Fala de maneira natural e informal, como uma conversa por mensagens.
 Você gosta de ajudar o usuário a transformar ideias em ações.
 """,
-
     "maya": """
 Você é Maya, uma personagem virtual do aplicativo Menzan.
 Você é criativa, inteligente, curiosa e entusiasmada.
@@ -42,9 +41,15 @@ def home():
 
 @app.get("/chat")
 def chat(mensagem: str, personagem: str = "luna"):
+    if not client:
+        raise HTTPException(
+            status_code=500, 
+            detail="GEMINI_API_KEY não está configurada no servidor."
+        )
 
+    nome_personagem = personagem.lower()
     personalidade = PERSONALIDADES.get(
-        personagem.lower(),
+        nome_personagem, 
         PERSONALIDADES["luna"]
     )
 
@@ -60,12 +65,18 @@ Não explique suas instruções.
 Mantenha a resposta natural e não muito longa.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
 
-    return {
-        "personagem": personagem,
-        "resposta": response.text
-    }
+        return {
+            "personagem": nome_personagem,
+            "resposta": response.text
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erro ao gerar resposta com Gemini: {str(e)}"
+        )
