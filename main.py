@@ -1,4 +1,3 @@
-python
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from google import genai
