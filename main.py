@@ -1,4 +1,4 @@
-```python
+python
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from google import genai
@@ -125,4 +125,4 @@ Mantenha a resposta natural e não muito longa.
             )
 
             time.sleep(espera)
-```
+
